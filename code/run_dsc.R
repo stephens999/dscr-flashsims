@@ -4,8 +4,7 @@ sessionInfo()
 
 dsc_flashsim=new_dsc("dsc-flashsim","../output/dsc-flashsim-files")
 
-sim_r1_paper =function(args){
-  n=200;p=300;pi0=0.9;s=c(0.25,.5,1,2,4);tau=NULL;missing=FALSE
+sim_r1_paper =function(n=200,p=300,pi0=0.9,s=c(0.25,.5,1,2,4),tau=NULL,missing=FALSE){
 
   #set tau as in paper for defaults
   if(is.null(tau)){
@@ -29,8 +28,15 @@ sim_r1_paper =function(args){
     miss = matrix(rbinom(n*p,1,0.5),nrow=n)
     Y[miss==1] = NA
   }
-  return(list(input=list(Y=Y),meta=list(LF=LF)))
+
+  return(list(Y=Y,LF=LF))
 }
+
+sim_r1_paper.wrapper = function(args){
+  res = do.call(sim_r1_paper,args = args)
+  return(list(meta = list(LF=res$LF),input = list(Y=res$Y)))
+}
+
 
 flash_r1.wrapper = function(input,args){
   f=flashr::flash_r1(input$Y)
@@ -68,7 +74,9 @@ rmse.wrapper = function(data,output){
   return(list(rmse=rmse(data$meta$LF,output$LFhat)))
 }
 
-add_scenario(dsc_flashsim,"strong-sparsity-r1",sim_r1_paper,seed=1:20)
+add_scenario(dsc_flashsim,"strong-sparsity-r1",sim_r1_paper.wrapper,args=list(),seed=1:20)
+add_scenario(dsc_flashsim,"intermediate-sparsity-r1",sim_r1_paper.wrapper,args=list(pi0=0.3),seed=1:20)
+
 
 add_method(dsc_flashsim,"flash_r1",flash_r1.wrapper)
 add_method(dsc_flashsim,"flash_r1_pn",flash_r1_pn.wrapper)
