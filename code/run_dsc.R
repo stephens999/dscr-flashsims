@@ -151,10 +151,11 @@ softImpute.cv.wrapper = function(input,args){
   K=1
   ngrids = args$ngrids
   fold = args$fold
+  max = args$max
 
   N = dim(Y)[1]
   P = dim(Y)[2]
-  c_s = seq(0,100,len=ngrids)
+  c_s = seq(0,max,len=ngrids)
   cvout = CVPMD_softImpute(Y,c_s,K ,fold , method = "softImpute")
   res = softImpute::softImpute(Y, rank.max = K,lambda = cvout$opt_s)
   return(list(LFhat = res$d[1] * res$u %*% t(res$v)))
@@ -182,7 +183,8 @@ add_method(dsc_flashsim,"ssvd.method",ssvd.method.wrapper)
 add_method(dsc_flashsim,"svd",svd.wrapper)
 add_method(dsc_flashsim,"pmd",pmd.wrapper)
 add_method(dsc_flashsim,"pmd.cv",pmd.cv.wrapper)
-add_method(dsc_flashsim,"softimpute.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5))
+add_method(dsc_flashsim,"softimpute.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5,max=100))
+add_method(dsc_flashsim,"softimpute2.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5,max=10))
 
 
 add_score(dsc_flashsim,rrmse.wrapper,"rmse")
