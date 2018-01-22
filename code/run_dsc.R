@@ -75,6 +75,96 @@ pmd.cv.wrapper = function(input,args){
 }
 
 
+# this a helper function by Wei to do CV
+CVPMD_softImpute=function(Y,c_s,K,fold = 10, method = "PMD"){
+  N = dim(Y)[1]
+  P = dim(Y)[2]
+  colindex = matrix(sample(P,P),ncol = fold)
+  rowindex = matrix(sample(N,N),ncol = fold)
+
+  missing= array(0,dim = c(fold,N,P))
+  foldindex = array(0,dim = c(fold,fold,2))
+  for(i in 1:fold){
+    for(j in 1:fold){
+      foldindex[i,j,1] = i
+      foldindex[i,j,2] = (i+j) %% fold
+    }
+  }
+  foldindex[which(foldindex == 0)] = fold
+  for(i in 1:fold){
+    missing[i, , ] = Y
+    for(j in 1:fold){
+      missing[i,rowindex[,foldindex[j,i,1]],colindex[,foldindex[j,i,2]]] = NA
+    }
+    missing[i,,which(colSums(missing[i,,],na.rm = T) ==0)] = Y[,which(colSums(missing[i,,],na.rm = T) ==0)]
+  }
+  # c_s is the candicate of shrinkage parameter
+  n_s = length(c_s)
+  # rmse for each grids
+  CVRMSE = rep(0,n_s)
+  minrmse = Inf
+  opt_s = 0
+  # for each candidate, we run it N_sim times
+  for(t_s in 1:n_s){
+    # for each grid
+    # each time we set the rmse to zeros
+    rmse = rep(0,fold)
+    for(i in 1:fold){
+      if(method == "PMD"){
+        res_log = capture.output({out = PMD(missing[i,,], sumabs = c_s[t_s], sumabsv = NULL, sumabsu = NULL,K = K)})
+      }else{
+        out = softImpute::softImpute(missing[i,,], rank.max = K,lambda = c_s[t_s])
+      }
+      if(length(out$d)==1){
+        misshat = (out$d) * out$u %*% t(out$v)
+      }else{
+        misshat = out$u %*%  diag(out$d) %*% t(out$v)
+      }
+      for(j in 1:fold){
+        # for each fold j
+        rmse[i] = rmse[i] + sum((Y[rowindex[,foldindex[j,i,1]],colindex[,foldindex[j,i,2]]] -
+                                   misshat[rowindex[,foldindex[j,i,1]],colindex[,foldindex[j,i,2]]])^2,na.rm = TRUE)
+      }
+    } #get the result for one run
+    CVRMSE[t_s] = CVRMSE[t_s] + sqrt(sum(rmse)/(N*P))
+    if(CVRMSE[t_s] < minrmse){
+      minrmse = CVRMSE[t_s]
+      opt_s = c_s[t_s]
+    }
+  }
+  return(list(opt_s = opt_s, output = CVRMSE))
+}
+
+
+# PMA.wrapper = function(Y,ngrids = 10,K,fold = 10){
+#   library(PMA)
+#   N = dim(Y)[1]
+#   P = dim(Y)[2]
+#   c_s = seq(0.3,0.8,len=ngrids)
+#   cvout = CVPMD_softImpute(Y,c_s,K ,fold , method = "PMD")
+#   res_log = capture.output({out = PMD(Y,sumabsu = NULL, sumabsv = NULL, sumabs = cvout$opt_s ,K = K)})
+#   return(list(d = out$d, u = out$u, v = out$v))
+# }
+
+softImpute.cv.wrapper = function(input,args){
+  Y= input$Y
+  K=1
+  ngrids = args$ngrids
+  fold = args$fold
+
+  N = dim(Y)[1]
+  P = dim(Y)[2]
+  c_s = seq(0,100,len=ngrids)
+  cvout = CVPMD_softImpute(Y,c_s,K ,fold , method = "softImpute")
+  res = softImpute::softImpute(Y, rank.max = K,lambda = cvout$opt_s)
+  return(list(LFhat = res$d[1] * res$u %*% t(res$v)))
+}
+
+
+
+### Scores
+
+
 rmse = function(a,b){return(sqrt(mean((a-b)^2)))}
 rrmse.wrapper = function(data,output){
   return(list(rmse=rmse(data$meta$LF,output$LFhat), rrmse=rmse(data$meta$LF,output$LFhat)/sqrt(mean(data$meta$LF^2))))
@@ -92,6 +182,8 @@ add_method(dsc_flashsim,"ssvd.method",ssvd.method.wrapper)
 add_method(dsc_flashsim,"svd",svd.wrapper)
 add_method(dsc_flashsim,"pmd",pmd.wrapper)
 add_method(dsc_flashsim,"pmd.cv",pmd.cv.wrapper)
+add_method(dsc_flashsim,"softimpute.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5))
+
 
 add_score(dsc_flashsim,rrmse.wrapper,"rmse")
 
