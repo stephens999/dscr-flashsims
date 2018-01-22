@@ -71,7 +71,7 @@ pmd.cv.wrapper = function(input,args){
 
 rmse = function(a,b){return(sqrt(mean((a-b)^2)))}
 rrmse.wrapper = function(data,output){
-  return(list(rrmse=rmse(data$meta$LF,output$LFhat)/sqrt(mean(data$meta$LF^2))))
+  return(list(rmse=rmse(data$meta$LF,output$LFhat), rrmse=rmse(data$meta$LF,output$LFhat)/sqrt(mean(data$meta$LF^2))))
 }
 
 add_scenario(dsc_flashsim,"strong-sparsity-r1",sim_r1_paper.wrapper,args=list(),seed=1:20)
@@ -85,7 +85,7 @@ add_method(dsc_flashsim,"svd",svd.wrapper)
 add_method(dsc_flashsim,"pmd",pmd.wrapper)
 add_method(dsc_flashsim,"pmd.cv",pmd.cv.wrapper)
 
-add_score(dsc_flashsim,rmse.wrapper,"rmse")
+add_score(dsc_flashsim,rrmse.wrapper,"rmse")
 
 
 res=run_dsc(dsc_flashsim)
