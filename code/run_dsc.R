@@ -184,7 +184,7 @@ add_method(dsc_flashsim,"svd",svd.wrapper)
 add_method(dsc_flashsim,"pmd",pmd.wrapper)
 add_method(dsc_flashsim,"pmd.cv",pmd.cv.wrapper)
 add_method(dsc_flashsim,"softimpute.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5,max=100))
-add_method(dsc_flashsim,"softimpute2.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5,max=10))
+add_method(dsc_flashsim,"softimpute2.cv",softImpute.cv.wrapper,args=list(ngrids=10,fold=5,max=10)) # finer grid near 0
 
 
 add_score(dsc_flashsim,rrmse.wrapper,"rmse")
